@@ -9,7 +9,7 @@ import { rawExecute } from '../db/raw-sql';
  */
 import { Injectable } from '@nestjs/common';
 import { EntityManager } from '@mikro-orm/core';
-import { newId } from '../common/ids';
+import { isUuid, newId } from '../common/ids';
 import { MetricsService } from '../common/metrics';
 import { Money, MoneyProps } from '../common/money';
 import { Wallet } from './wallet';
@@ -52,7 +52,8 @@ interface LedgerRow {
   currency: string;
   balance_before: string;
   balance_after: string;
-  created_at: Date;
+  /** Vem como string do driver (SQL cru não converte para Date). */
+  created_at: string | Date;
 }
 
 export interface ReconciliationReport {
@@ -101,6 +102,12 @@ export class WalletService {
         walletEntity.createdAt = wallet.createdAt;
         walletEntity.updatedAt = wallet.updatedAt;
         tx.persist(walletEntity);
+
+        // Grava a wallet ANTES do lançamento do ledger: o ledger tem FK para
+        // wallets e as duas entidades não têm relação no ORM, então sem esse
+        // flush o ORM pode tentar inserir o ledger antes da wallet
+        // (violando a foreign key).
+        await tx.flush();
 
         let openingTransaction: WagerTransaction | undefined;
 
@@ -167,6 +174,10 @@ export class WalletService {
   }
 
   async findById(walletId: string): Promise<Wallet> {
+    if (!isUuid(walletId)) {
+      throw new EntityNotFoundError('wallet', walletId);
+    }
+
     const entity = await this.em.fork({ clear: true }).findOne(WalletEntity, walletId);
     if (!entity) {
       throw new EntityNotFoundError('wallet', walletId);
@@ -223,12 +234,12 @@ export class WalletService {
       amount: { amount: row.amount, currency: row.currency },
       balanceBefore: { amount: row.balance_before, currency: row.currency },
       balanceAfter: { amount: row.balance_after, currency: row.currency },
-      createdAt: row.created_at,
+      createdAt: new Date(row.created_at),
     }));
 
     const last = page[page.length - 1];
     const nextCursor =
-      hasMore && last ? encodeCursor(last.created_at, last.id) : null;
+      hasMore && last ? encodeCursor(new Date(last.created_at), last.id) : null;
 
     return { entries, nextCursor };
   }

@@ -249,6 +249,8 @@ describe('Wagering API', () => {
       walletId: wallet.id,
       kind: 'REFUND',
       amount: '30.00',
+      // A referência precisa ser da MESMA rodada da BET.
+      roundId: bet.body.roundId,
       referenceExternalTransactionId: bet.body.externalTransactionId,
     });
 
@@ -265,6 +267,7 @@ describe('Wagering API', () => {
       walletId: wallet.id,
       kind: 'REFUND',
       amount: '30.00',
+      roundId: bet.body.roundId,
       referenceExternalTransactionId: bet.body.externalTransactionId,
     });
     const rejected = await api('POST', '/wagering/transactions', {
@@ -290,11 +293,24 @@ describe('Wagering API', () => {
       headers: { 'idempotency-key': win.idempotencyKey },
     });
 
+    // O jogador "gasta" o prêmio: sobra 5.00.
+    const spend = betPayload({
+      playerId: wallet.playerId,
+      walletId: wallet.id,
+      amount: '45.00',
+      roundId: win.body.roundId,
+    });
+    await api('POST', '/wagering/transactions', {
+      body: spend.body,
+      headers: { 'idempotency-key': spend.idempotencyKey },
+    });
+
     const rollback = betPayload({
       playerId: wallet.playerId,
       walletId: wallet.id,
       kind: 'ROLLBACK',
       amount: '40.00',
+      roundId: win.body.roundId,
       referenceExternalTransactionId: win.body.externalTransactionId,
     });
 
@@ -308,12 +324,14 @@ describe('Wagering API', () => {
     expect(response.body.failureCode).toBe('REVERSAL_WOULD_NEGATIVE_BALANCE');
 
     await withDb(async (client) => {
-      expect(await walletBalance(client, wallet.id)).toBe('50.00');
+      expect(await walletBalance(client, wallet.id)).toBe('5.00');
     });
   });
 
   test('referência fora de ordem: PENDING_REFERENCE (202) e reprocessamento', async () => {
     const wallet = await createWallet('100.00');
+    // id único: o banco guarda as transações das execuções anteriores.
+    const lateBetId = `bet-${randomUUID()}`;
 
     // A BET ainda não existe: o REFUND fica pendente.
     const refund = betPayload({
@@ -321,7 +339,7 @@ describe('Wagering API', () => {
       walletId: wallet.id,
       kind: 'REFUND',
       amount: '20.00',
-      referenceExternalTransactionId: 'bet-que-chega-depois',
+      referenceExternalTransactionId: lateBetId,
     });
 
     const pending = await api('POST', '/wagering/transactions', {
@@ -339,12 +357,12 @@ describe('Wagering API', () => {
       roundId: refund.body.roundId,
     });
     // usa o MESMO id externo da referência
-    bet.body.externalTransactionId = 'bet-que-chega-depois';
+    bet.body.externalTransactionId = lateBetId;
     bet.body.roundId = refund.body.roundId;
 
     const betResponse = await api('POST', '/wagering/transactions', {
       body: bet.body,
-      headers: { 'idempotency-key': `provider-a:bet-que-chega-depois` },
+      headers: { 'idempotency-key': `provider-a:${lateBetId}` },
     });
     expect(betResponse.status).toBe(201);
 
@@ -360,7 +378,7 @@ describe('Wagering API', () => {
     }
 
     expect(settled).toBe(true);
-  });
+  }, 30_000); // o worker reprocessa com backoff de 5s -> precisa de mais tempo
 
   test('consultas: wallet, ledger (cursor) e transação pelo provedor', async () => {
     const wallet = await createWallet('100.00');

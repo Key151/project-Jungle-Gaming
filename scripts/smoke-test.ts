@@ -173,7 +173,7 @@ async function main(): Promise<void> {
     headers: { 'idempotency-key': loss.idempotencyKey },
   });
   check('LOSS = 201 PROCESSED', lossResponse.body?.status === 'PROCESSED', lossResponse.body);
-  check('LOSS não mexe no saldo', lossResponse.body?.balance?.amount === '975.00', lossResponse.body);
+  check('LOSS devolve o saldo (não mexe nele)', lossResponse.body?.balance?.amount === '975.00', lossResponse.body);
 
   const win = bet(wallet, { kind: 'WIN', amount: '50.00' });
   const winResponse = await api('POST', '/wagering/transactions', {
@@ -182,14 +182,25 @@ async function main(): Promise<void> {
   });
   check('WIN credita = 1025.00', winResponse.body?.balance?.amount === '1025.00', winResponse.body);
 
-  const refunded = bet(wallet, { kind: 'REFUND', amount: '25.00', referenceExternalTransactionId: first.body.externalTransactionId });
+  // A referência precisa ser da MESMA rodada (regra do enunciado).
+  const refunded = bet(wallet, {
+    kind: 'REFUND',
+    amount: '25.00',
+    roundId: first.body.roundId,
+    referenceExternalTransactionId: first.body.externalTransactionId,
+  });
   const refundResponse = await api('POST', '/wagering/transactions', {
     body: refunded.body,
     headers: { 'idempotency-key': refunded.idempotencyKey },
   });
   check('REFUND da BET credita de volta = 1050.00', refundResponse.body?.balance?.amount === '1050.00', refundResponse.body);
 
-  const refundTwice = bet(wallet, { kind: 'REFUND', amount: '25.00', referenceExternalTransactionId: first.body.externalTransactionId });
+  const refundTwice = bet(wallet, {
+    kind: 'REFUND',
+    amount: '25.00',
+    roundId: first.body.roundId,
+    referenceExternalTransactionId: first.body.externalTransactionId,
+  });
   const refundTwiceResponse = await api('POST', '/wagering/transactions', {
     body: refundTwice.body,
     headers: { 'idempotency-key': refundTwice.idempotencyKey },
@@ -269,7 +280,7 @@ async function main(): Promise<void> {
   );
   check('GET por provedor = 200', byProvider.status === 200, byProvider.body);
 
-  const missing = await api('GET', '/wallets/nao-existe');
+  const missing = await api('GET', '/wallets/00000000-0000-0000-0000-000000000000');
   check('wallet inexistente = 404', missing.status === 404, missing.body);
 
   const metrics = await fetch(`${BASE_URL}/metrics`);

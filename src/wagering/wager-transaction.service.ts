@@ -7,7 +7,7 @@
  */
 import { Injectable } from '@nestjs/common';
 import { EntityManager } from '@mikro-orm/core';
-import { newId } from '../common/ids';
+import { isUuid, newId } from '../common/ids';
 import { hashPayload, JsonValue } from '../common/payload-hash';
 import { MetricsService } from '../common/metrics';
 import { Money, MoneyProps } from '../common/money';
@@ -128,6 +128,10 @@ export class WageringService {
   }
 
   async findById(transactionId: string): Promise<WagerTransaction> {
+    if (!isUuid(transactionId)) {
+      throw new EntityNotFoundError('wager transaction', transactionId);
+    }
+
     const entity = await this.em
       .fork({ clear: true })
       .findOne(WagerTransactionEntity, transactionId);
@@ -238,9 +242,28 @@ export class WageringService {
     // 2) Aplicação no saldo
     // ----------------------------------------------------------------
 
-    // LOSS não mexe no saldo e não gera lançamento: só registra o resultado.
+    // LOSS não mexe no saldo e não gera lançamento: só registra o resultado
+    // da rodada. Ainda assim conferimos se a wallet existe (senão aceitaríamos
+    // uma LOSS de uma wallet inexistente).
     if (tx.kind === WagerTransactionKind.Loss) {
-      const outcome = await this.markProcessed(em, tx, undefined, undefined, cmd);
+      const lossWallet = await em.findOne(WalletEntity, tx.walletId);
+
+      if (!lossWallet) {
+        return this.reject(em, tx, FailureCode.WALLET_NOT_FOUND);
+      }
+      if (lossWallet.playerId !== tx.playerId) {
+        return this.reject(em, tx, FailureCode.WALLET_OWNERSHIP_MISMATCH);
+      }
+      if (lossWallet.currency !== tx.money.currency) {
+        return this.reject(em, tx, FailureCode.CURRENCY_MISMATCH);
+      }
+
+      const balance = Money.from({
+        amount: lossWallet.balanceAmount,
+        currency: lossWallet.currency,
+      });
+
+      const outcome = await this.markProcessed(em, tx, undefined, balance, cmd);
       this.metrics.observe('wagering_processing_duration_ms', Date.now() - startedAt);
       return outcome;
     }

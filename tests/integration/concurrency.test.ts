@@ -187,11 +187,11 @@ describe('Concorrência', () => {
     });
 
     await withDb(async (client) => {
-      const transactions = await client.query(
-        'SELECT COUNT(*)::int AS count FROM wager_transactions WHERE idempotency_key = $1',
+      const transactions = await client.query<{ id: string }>(
+        'SELECT id FROM wager_transactions WHERE idempotency_key = $1',
         [idempotencyKey],
       );
-      expect(transactions.rows[0].count).toBe(1);
+      expect(transactions.rows.length).toBe(1);
 
       // Eventos na outbox: WagerTransactionProcessed + WalletBalanceChanged.
       const events = await client.query(

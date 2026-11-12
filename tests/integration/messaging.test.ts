@@ -180,7 +180,7 @@ describe('Mensageria SQS', () => {
     });
 
     expect(published).toBe(true);
-  });
+  }, 30_000); // o publisher roda a cada 500ms, mas o SQS pode demorar um pouco
 
   test('payload inválido vai para a DLQ', async () => {
     const invalid = {
