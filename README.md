@@ -66,6 +66,7 @@ bun run build && bun run start
 | `bun run migrate:status` | mostra o estado das migrations |
 | `bun run test` | testes **unitários** (sem infra) |
 | `bun run test:integration` | testes de **integração** (exigem o app no ar) |
+| `bun run smoke` | **smoke test**: exercita a API e imprime PASS/FAIL de cada cenário |
 | `bun run typecheck` | `tsc --noEmit` em src + tests + scripts |
 
 ---
@@ -98,7 +99,46 @@ Cenários cobertos pela integração:
 
 ---
 
-## 3. API HTTP
+## 3. Verificando que está funcionando
+
+Com a aplicação no ar:
+
+```bash
+bun run smoke
+```
+
+O script exercita a API inteira e imprime o resultado de cada cenário
+(health, criação de wallet, idempotência/replay/conflito, LOSS/WIN/REFUND,
+referência fora de ordem, o cenário das duas apostas de 80 e a reconciliação):
+
+```
+== Smoke test em http://localhost:3000 ==
+
+health
+  OK   GET /health/live = 200
+  OK   Postgres alcançável
+
+wallet
+  OK   POST /wallets = 201
+  OK   saldo inicial 1000.00 e version 1
+  OK   wallet duplicada = 409
+  OK   payload inválido = 400
+
+idempotência
+  OK   BET = 201 PROCESSED
+  OK   saldo após BET = 975.00
+  OK   replay = 200 com idempotentReplay=true
+  OK   mesma key + payload diferente = 409
+  ...
+== 28 passaram, 0 falharam ==
+```
+
+O código de saída é 0 se tudo passou (1 se alguma verificação falhou), então
+dá para usar em CI.
+
+---
+
+## 4. API HTTP
 
 ### Criar wallet
 
@@ -185,7 +225,7 @@ Formato do erro:
 
 ---
 
-## 4. Mensageria
+## 5. Mensageria
 
 Filas (criadas idempotentemente pela aplicação no boot):
 
@@ -227,7 +267,7 @@ awslocal --endpoint-url=http://localhost:4566 sqs send-message \
 
 ---
 
-## 5. Estrutura do projeto
+## 6. Estrutura do projeto
 
 ```
 src/
@@ -270,7 +310,7 @@ tests/integration/        # testes contra a app e o Postgres reais
 
 ---
 
-## 6. Documentação
+## 7. Documentação
 
 As decisões técnicas, trade-offs, taxonomia de falhas e limitações estão em
 [ARCHITECTURE.md](./ARCHITECTURE.md).
