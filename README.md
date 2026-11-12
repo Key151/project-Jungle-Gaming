@@ -18,7 +18,7 @@ disputam o mesmo saldo ao mesmo tempo.
 
 ---
 
-## 0. Sobre este projeto (leia isso antes)
+## 0. Sobre este projeto
 
 Este projeto foi feito por mim, **desenvolvedor júnior**, com **auxílio do
 OpenCode** (IA) para escrever o código, debugar e documentar.
@@ -32,8 +32,8 @@ Sendo transparente sobre o que isso significa:
 - ✅ **O código compila, roda e passa nos testes** — 35 testes unitários,
   23 testes de integração contra PostgreSQL e SQS reais, e um smoke test com
   31 verificações na API.
-- ⚠️ **Escrevi bastante código com ajuda da IA.** Sei explicar o que cada
-  parte faz e por que existe, mas não escrevi cada linha do zero. Isso está
+- ⚠️ **Escrevi bastante código com ajuda da IA (opencode).** Sei explicar
+  partes o que faz e por que existe, mas não escrevi cada linha do zero. Isso está
   dito aqui de propósito, e não tem nada de errado: é como qualquer dev
   trabalha com documentação, Stack Overflow e IA hoje.
 - ⚠️ Sei bem o que **não** sei ainda: balanceamento de carga real, tuning de
