@@ -1,12 +1,16 @@
 /**
  * Diagnóstico: 50 requisições paralelas com a MESMA idempotency key.
  * Mostra a distribuição de status e os erros.
+ *
+ *   bun scripts/diag-parallel.ts
  */
+export {}; // transforma em módulo (permite await no topo no typecheck)
+
 const BASE = 'http://localhost:3000';
 
 const playerId = `diag-${Math.random().toString(36).slice(2)}`;
 
-const created = await (
+const created: any = await (
   await fetch(`${BASE}/wallets`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
@@ -38,7 +42,7 @@ const responses = await Promise.all(
       method: 'POST',
       headers: { 'content-type': 'application/json', 'idempotency-key': `provider-a:${externalTransactionId}` },
       body: JSON.stringify(body),
-    }).then(async (r) => ({ status: r.status, body: await r.json() })),
+    }).then(async (r) => ({ status: r.status, body: (await r.json()) as any })),
   ),
 );
 
