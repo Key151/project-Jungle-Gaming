@@ -6,6 +6,3 @@ dist/
 .env
 .DS_Store
 coverage/
-
-# Roteiro de estudo pessoal (nao vai para o GitHub)
-GUIA-ENTREVISTA.md
