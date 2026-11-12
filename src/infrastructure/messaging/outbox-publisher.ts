@@ -34,6 +34,8 @@ export class OutboxPublisher implements OnModuleInit, OnModuleDestroy {
   private timer: NodeJS.Timeout | null = null;
   private running = false;
   private stopped = false;
+  private failures = 0;
+  private nextAttemptAt = 0;
 
   constructor(
     private readonly em: EntityManager,
@@ -60,6 +62,10 @@ export class OutboxPublisher implements OnModuleInit, OnModuleDestroy {
 
   async tick(): Promise<void> {
     if (this.running || this.stopped) return;
+
+    // Backoff simples quando o banco/SQS está fora: evita inundar o log.
+    if (Date.now() < this.nextAttemptAt) return;
+
     this.running = true;
     try {
       const messages = await this.claimBatch();
@@ -67,8 +73,16 @@ export class OutboxPublisher implements OnModuleInit, OnModuleDestroy {
         await this.publish(message);
       }
       await this.updateLagMetric();
+      this.failures = 0;
     } catch (error) {
-      this.logger.error(`outbox publisher tick failed: ${(error as Error).message}`);
+      this.failures += 1;
+      this.nextAttemptAt = Date.now() + Math.min(1000 * 2 ** this.failures, 30_000);
+      // Loga o primeiro erro e depois a cada 10 falhas (evita spam).
+      if (this.failures === 1 || this.failures % 10 === 0) {
+        this.logger.warn(
+          `outbox publisher tick failed (${this.failures}x): ${(error as Error).message}`,
+        );
+      }
     } finally {
       this.running = false;
     }

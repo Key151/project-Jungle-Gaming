@@ -55,6 +55,7 @@ export class SqsWagerConsumer implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(SqsWagerConsumer.name);
   private running = false;
   private stopped = false;
+  private failures = 0;
   private readonly inFlight = new Set<Promise<void>>();
 
   constructor(
@@ -90,8 +91,13 @@ export class SqsWagerConsumer implements OnModuleInit, OnModuleDestroy {
         await Promise.allSettled(tasks);
       } catch (error) {
         if (this.stopped) break;
-        this.logger.error(`sqs consumer loop error: ${(error as Error).message}`);
-        await new Promise((resolve) => setTimeout(resolve, 1000));
+        this.failures += 1;
+        if (this.failures === 1 || this.failures % 10 === 0) {
+          this.logger.warn(
+            `sqs consumer loop error (${this.failures}x): ${(error as Error).message}`,
+          );
+        }
+        await new Promise((resolve) => setTimeout(resolve, 2000));
       }
     }
   }

@@ -26,6 +26,7 @@ export class PendingReferenceWorker implements OnModuleInit, OnModuleDestroy {
   private timer: NodeJS.Timeout | null = null;
   private running = false;
   private stopped = false;
+  private failures = 0;
 
   constructor(
     private readonly em: EntityManager,
@@ -69,7 +70,12 @@ export class PendingReferenceWorker implements OnModuleInit, OnModuleDestroy {
         await this.reprocess(row);
       }
     } catch (error) {
-      this.logger.error(`pending reference worker error: ${(error as Error).message}`);
+      this.failures += 1;
+      if (this.failures === 1 || this.failures % 10 === 0) {
+        this.logger.warn(
+          `pending reference worker error (${this.failures}x): ${(error as Error).message}`,
+        );
+      }
     } finally {
       this.running = false;
     }

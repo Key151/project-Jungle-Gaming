@@ -7,6 +7,7 @@
  * código.
  */
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import { newId } from '../../shared/ids';
 import {
   SQSClient,
   SendMessageCommand,
@@ -147,8 +148,9 @@ export class SqsService implements OnModuleInit {
         MessageGroupId: options?.groupId ?? 'default',
         // Deduplicação por 5 minutos: duas publicações do MESMO evento não
         // viram duas mensagens. Publicações de eventos diferentes têm ids
-        // diferentes.
-        MessageDeduplicationId: options?.deduplicationId,
+        // diferentes. (Em fila FIFO o id é obrigatório quando a
+        // deduplicação por conteúdo está desligada.)
+        MessageDeduplicationId: options?.deduplicationId ?? newId(),
       }),
     );
   }
