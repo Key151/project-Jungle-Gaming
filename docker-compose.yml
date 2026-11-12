@@ -1,0 +1,100 @@
+# =====================================================================
+# Jungle Gaming - Distributed Wagering Processor
+#
+#   docker compose up -d --build     # sobe Postgres + LocalStack + app
+#   docker compose logs -f app       # logs da aplicação
+#   docker compose down -v            # derruba e limpa os volumes
+# =====================================================================
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: jungle-postgres
+    environment:
+      POSTGRES_USER: jungle
+      POSTGRES_PASSWORD: jungle
+      POSTGRES_DB: jungle
+    ports:
+      - '5432:5432'
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U jungle -d jungle']
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  # SQS local (AWS SDK v3 fala com ele em http://localhost:4566).
+  # As filas são criadas pela própria aplicação no boot (idempotente),
+  # por isso não há script de inicialização de filas.
+  localstack:
+    image: localstack/localstack:3
+    container_name: jungle-localstack
+    environment:
+      SERVICES: sqs
+      DEBUG: '0'
+      AWS_DEFAULT_REGION: us-east-1
+      EAGER_SERVICE_LOADING: '1'
+    ports:
+      - '4566:4566'
+    healthcheck:
+      test: ['CMD-SHELL', 'curl -f http://localhost:4566/_localstack/health || exit 1']
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    volumes:
+      - localstackdata:/var/lib/localstack
+
+  # Aplica as migrations SQL versionadas (roda uma vez e encerra).
+  migrate:
+    build:
+      context: .
+    container_name: jungle-migrate
+    command: ['bun', 'scripts/migrate.ts', 'up']
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: '5432'
+      POSTGRES_USER: jungle
+      POSTGRES_PASSWORD: jungle
+      POSTGRES_DB: jungle
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  app:
+    build:
+      context: .
+    container_name: jungle-app
+    command: ['bun', 'dist/main.js']
+    environment:
+      NODE_ENV: production
+      PORT: '3000'
+      LOG_LEVEL: info
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: '5432'
+      POSTGRES_USER: jungle
+      POSTGRES_PASSWORD: jungle
+      POSTGRES_DB: jungle
+      AWS_REGION: us-east-1
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
+      SQS_ENDPOINT: http://localstack:4566
+    ports:
+      - '3000:3000'
+    depends_on:
+      postgres:
+        condition: service_healthy
+      localstack:
+        condition: service_started
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ['CMD-SHELL', 'bun -e "const r = await fetch(\'http://localhost:3000/health/ready\'); process.exit(r.ok ? 0 : 1)"']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+volumes:
+  pgdata:
+  localstackdata:

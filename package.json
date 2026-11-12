@@ -1,0 +1,47 @@
+{
+  "name": "jungle-wagering-processor",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Jungle Gaming - Technical Challenge: Distributed Wagering Processor",
+  "license": "UNLICENSED",
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "start": "bun dist/main.js",
+    "start:prod": "bun dist/main.js",
+    "dev": "bun --watch dist/main.js",
+    "migrate": "bun scripts/migrate.ts up",
+    "migrate:down": "bun scripts/migrate.ts down",
+    "migrate:status": "bun scripts/migrate.ts status",
+    "docker:up": "docker compose up -d --build",
+    "docker:down": "docker compose down",
+    "docker:logs": "docker compose logs -f app",
+    "test": "bun test tests/unit",
+    "test:unit": "bun test tests/unit",
+    "test:integration": "bun test tests/integration",
+    "test:all": "bun test",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@aws-sdk/client-sqs": "^3.700.0",
+    "@mikro-orm/core": "^7.2.9",
+    "@mikro-orm/decorators": "7.2.9",
+    "@mikro-orm/nestjs": "^7.1.0",
+    "@mikro-orm/postgresql": "^7.2.9",
+    "@nestjs/common": "^11.0.0",
+    "@nestjs/core": "^11.0.0",
+    "@nestjs/platform-express": "^11.0.0",
+    "class-transformer": "^0.5.1",
+    "class-validator": "^0.14.1",
+    "decimal.js": "^10.4.3",
+    "pg": "^8.13.1",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.1"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.0",
+    "@types/node": "^22.10.0",
+    "@types/pg": "^8.11.10",
+    "bun-types": "^1.4.0",
+    "typescript": "^5.7.2"
+  }
+}
