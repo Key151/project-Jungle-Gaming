@@ -34,7 +34,7 @@ implementações da regra de negócio.
 
 - **Decisão:** `Money` guarda um `Decimal` (decimal.js) internamente e é
   **sempre** exposto como string decimal com escala fixa de 2
-  (`src/domain/money.ts`). No banco, `NUMERIC(18,2)`.
+  (`src/common/money.ts`). No banco, `NUMERIC(18,2)`.
 - **Por quê:** `0.1 + 0.2 === 0.30000000000000004` em IEEE-754. Em dinheiro isso
   é inaceitável. `number` está proibido pelo enunciado e também não é
   armazenável com segurança em `double precision`.
@@ -49,16 +49,16 @@ implementações da regra de negócio.
   exato, mas perde a noção de "dinheiro" no código e complica a serialização.
   `decimal.js` dá precisão de 40 dígitos, folga de sobra para 2 casas.
 
-### 2.2 Domínio puro separado do ORM
+### 2.2 Regras de negócio fora das entidades do banco
 
-- **Decisão:** `src/domain/*` não importa NestJS nem MikroORM. As entidades de
-  persistência (`src/infrastructure/persistence/entities/*`) são projeções
-  "burra" do agregado, e o mapeamento é explícito.
+- **Decisão:** as classes de regra (`src/common/money.ts`, `src/wallet/wallet.ts`,
+  `src/wallet/wallet-ledger-entry.ts`, `src/wagering/wager-transaction.ts`) não
+  importam NestJS nem MikroORM. As entidades do banco (`*.entity.ts`) são só a
+  projeção do agregado, e o mapeamento fica no service.
 - **Por quê:** o enunciado diz que "o domínio não depende de tipos monetários do
   ORM nem de decorators do NestJS". A separação também deixa os testes
   unitários rodarem sem banco e sem container (35 testes em ~60 ms).
-- **Custo:**appers manuais (um para wallet, um para transação). É o preço da
-  clareza.
+- **Custo:** mappers manuais. É o preço da clareza.
 
 ### 2.3 ORM: MikroORM 7
 
@@ -75,7 +75,7 @@ implementações da regra de negócio.
 - **Custo/limitação:** no MikroORM 7 (ESM-only) o SQL cru precisa de
   placeholders `?` (o driver formata e escapa os valores) e precisa receber o
   **contexto de transação** para rodar dentro da transação aberta. Isso está
-  isolado em `src/infrastructure/persistence/raw-sql.ts`, num único helper
+  isolado em `src/db/raw-sql.ts`, num único helper
   (`rawExecute`), usado por todas as queries cruas.
 
 ### 2.4 Schema: SQL escrito à mão, versionado e reversível
@@ -182,7 +182,7 @@ implementações da regra de negócio.
 
 - **Decisão:** não há autenticação. O enunciado aceita isso desde que a
   decisão e o **ponto de extensão** fiquem explícitos.
-- **Ponto de extensão:** `src/interfaces/http/auth/no-op-auth.guard.ts` é o
+- **Ponto de extensão:** `src/common/auth.guard.ts` é o
   `AuthGuard` no-op aplicado por `@UseGuards` nos controllers. O desenho
   pretendido (documentado no próprio arquivo) é:
   1. validar o Bearer token contra o JWKS de um IdP externo (Keycloak,
@@ -204,7 +204,7 @@ implementações da regra de negócio.
   `design:paramtypes`) e o transpilador do Bun não emite metadata de
   decorators. Compilar com `tsc` e **executar** com Bun resolve isso sem
   abrir mão do Bun como runtime.
-- Os testes rodam com `bun test` (nativo), sobre os fontes de `src/domain`
+- Os testes rodam com `bun test` (nativo), sobre os fontes das regras de negócio
   (TypeScript puro, sem decorators).
 
 ### 2.11 Observabilidade (simplificada, como o enunciado permite)

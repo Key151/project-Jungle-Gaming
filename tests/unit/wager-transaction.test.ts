@@ -3,15 +3,15 @@
  * direções de ledger eRequirement de referência.
  */
 import { describe, expect, test } from 'bun:test';
-import { Money } from '../../src/domain/money';
-import { LedgerDirection } from '../../src/domain/wallet-ledger-entry';
+import { Money } from '../../src/common/money';
+import { LedgerDirection } from '../../src/wallet/wallet-ledger-entry';
 import {
   FailureCode,
   InvalidTransactionStateError,
   WagerTransaction,
   WagerTransactionKind,
   WagerTransactionStatus,
-} from '../../src/domain/wager-transaction';
+} from '../../src/wagering/wager-transaction';
 
 function create(
   kind: WagerTransactionKind,

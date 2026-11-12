@@ -2,13 +2,13 @@
  * Testes unitários da Wallet e do Ledger (seção 6.2 e 6.4).
  */
 import { describe, expect, test } from 'bun:test';
-import { CurrencyMismatchError, Money } from '../../src/domain/money';
+import { CurrencyMismatchError, Money } from '../../src/common/money';
 import {
   InsufficientFundsError,
   Wallet,
   WalletInvariantError,
-} from '../../src/domain/wallet';
-import { LedgerDirection, WalletLedgerEntry } from '../../src/domain/wallet-ledger-entry';
+} from '../../src/wallet/wallet';
+import { LedgerDirection, WalletLedgerEntry } from '../../src/wallet/wallet-ledger-entry';
 
 const brl = (amount: string) => Money.from({ amount, currency: 'BRL' });
 

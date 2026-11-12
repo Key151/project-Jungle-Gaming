@@ -9,8 +9,10 @@ import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
-import { DomainExceptionFilter } from './interfaces/http/domain-exception.filter';
-import { rootLogger } from './shared/logger';
+import { DomainExceptionFilter } from './common/exception.filter';
+import { AppLogger } from './common/logger';
+
+const logger = new AppLogger('main');
 
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.create(AppModule, {
@@ -18,7 +20,7 @@ async function bootstrap(): Promise<void> {
   });
 
   // Validação de payload: whitelist remove campos desconhecidos e
-  // forbidNonWhitelisted rejeita o request — payload inválido = 400.
+  // forbidNonWhitelisted rejeita o request - payload inválido = 400.
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
@@ -38,10 +40,10 @@ async function bootstrap(): Promise<void> {
   const port = Number(process.env['PORT'] ?? 3000);
   await app.listen(port, '0.0.0.0');
 
-  rootLogger.info('wagering processor started', { port });
+  logger.info('wagering processor started', { port });
 }
 
 bootstrap().catch((error) => {
-  rootLogger.error('failed to start application', { error });
+  logger.error('failed to start application', { error: String(error) });
   process.exit(1);
 });

@@ -231,19 +231,37 @@ awslocal --endpoint-url=http://localhost:4566 sqs send-message \
 
 ```
 src/
-  domain/                 # regras de negócio puras (sem ORM, sem Nest)
-    money.ts              # value object de dinheiro (string decimal)
-    wallet.ts             # aggregate root da wallet
-    wallet-ledger-entry.ts# livro-razão imutável
-    wager-transaction.ts  # aggregate da operação de aposta
-    integration-event.ts  # envelope dos eventos + eventos concretos
-  application/            # casos de uso (orquestram domínio + persistência)
-    wagering/             # processador (usado pelo HTTP e pelo SQS)
-    wallet/               # criação, ledger e reconciliação
-  infrastructure/
-    persistence/          # entidades MikroORM + helper de SQL cru transacional
-    messaging/            # SQS: cliente, consumidor, publisher da outbox, worker
-  interfaces/http/        # controllers, DTOs, filtro de erros, guard
+  common/                # coisas compartilhadas
+    money.ts             # value object de dinheiro (string decimal)
+    integration-event.ts # envelope dos eventos + eventos concretos
+    dto.ts               # DTOs (validação de payload)
+    errors.ts            # erros de aplicação
+    exception.filter.ts  # erro -> status HTTP
+    auth.guard.ts        # AuthGuard no-op (ponto de extensão)
+    logger.ts            # log em JSON
+    metrics.ts           # contadores e gauges
+    payload-hash.ts      # hash canônico do payload (idempotência)
+    ids.ts, correlation.middleware.ts
+  wallet/                # módulo de wallet
+    wallet.ts            # aggregate da wallet
+    wallet-ledger-entry.ts  # livro-razão imutável
+    wallet.entity.ts     # entidade MikroORM
+    wallet-ledger-entry.entity.ts
+    wallet.service.ts    # criação, ledger e reconciliação
+    wallet.controller.ts
+  wagering/              # módulo de apostas
+    wager-transaction.ts # aggregate da operação de aposta
+    wager-transaction.entity.ts
+    wager-transaction.service.ts  # o caso de uso (HTTP e SQS)
+    wagering.controller.ts
+  messaging/             # SQS
+    sqs.service.ts       # cliente (cria as filas no boot)
+    sqs.consumer.ts      # consumidor da fila de transações
+    outbox.publisher.ts  # publica os eventos da outbox
+    pending-reference.worker.ts  # reprocessa PENDING_REFERENCE
+    inbox-message.entity.ts, outbox-message.entity.ts
+  db/raw-sql.ts          # helper de SQL cru dentro da transação
+  health/                # /health/live, /health/ready, /metrics
 migrations/               # SQL versionado e reversível
 scripts/migrate.ts        # runner das migrations
 tests/unit/               # testes puros (bun test)

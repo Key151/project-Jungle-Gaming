@@ -2,27 +2,26 @@ import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { MikroOrmModule } from '@mikro-orm/nestjs';
 import { PostgreSqlDriver } from '@mikro-orm/postgresql';
 
-import { MetricsService } from './shared/metrics';
-import { WagerTransactionProcessor } from './application/wagering/wager-transaction.processor';
-import { WageringService } from './application/wagering/wagering.service';
-import { WalletService } from './application/wallet/wallet.service';
+import { MetricsService } from './common/metrics';
+import { WageringService } from './wagering/wager-transaction.service';
+import { WalletService } from './wallet/wallet.service';
 
-import { WalletEntity } from './infrastructure/persistence/entities/wallet.entity';
-import { WalletLedgerEntryEntity } from './infrastructure/persistence/entities/wallet-ledger-entry.entity';
-import { WagerTransactionEntity } from './infrastructure/persistence/entities/wager-transaction.entity';
-import { InboxMessageEntity } from './infrastructure/persistence/entities/inbox-message.entity';
-import { OutboxMessageEntity } from './infrastructure/persistence/entities/outbox-message.entity';
+import { WalletEntity } from './wallet/wallet.entity';
+import { WalletLedgerEntryEntity } from './wallet/wallet-ledger-entry.entity';
+import { WagerTransactionEntity } from './wagering/wager-transaction.entity';
+import { InboxMessageEntity } from './messaging/inbox-message.entity';
+import { OutboxMessageEntity } from './messaging/outbox-message.entity';
 
-import { SqsService } from './infrastructure/messaging/sqs.service';
-import { OutboxPublisher } from './infrastructure/messaging/outbox-publisher';
-import { SqsWagerConsumer } from './infrastructure/messaging/sqs-wager-consumer';
-import { PendingReferenceWorker } from './infrastructure/messaging/pending-reference-worker';
+import { SqsService } from './messaging/sqs.service';
+import { OutboxPublisher } from './messaging/outbox.publisher';
+import { SqsWagerConsumer } from './messaging/sqs.consumer';
+import { PendingReferenceWorker } from './messaging/pending-reference.worker';
 
-import { WalletsController } from './interfaces/http/controllers/wallets.controller';
-import { WageringController } from './interfaces/http/controllers/wagering.controller';
-import { HealthController } from './interfaces/http/controllers/health.controller';
-import { MetricsController } from './interfaces/http/controllers/metrics.controller';
-import { CorrelationMiddleware } from './interfaces/http/middleware/correlation.middleware';
+import { WalletsController } from './wallet/wallet.controller';
+import { WageringController } from './wagering/wagering.controller';
+import { HealthController } from './health/health.controller';
+import { MetricsController } from './health/metrics.controller';
+import { CorrelationMiddleware } from './common/correlation.middleware';
 
 @Module({
   imports: [
@@ -53,7 +52,6 @@ import { CorrelationMiddleware } from './interfaces/http/middleware/correlation.
   ],
   providers: [
     MetricsService,
-    WagerTransactionProcessor,
     WageringService,
     WalletService,
     SqsService,

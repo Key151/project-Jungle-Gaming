@@ -7,7 +7,7 @@ import {
   CurrencyMismatchError,
   InvalidMoneyError,
   Money,
-} from '../../src/domain/money';
+} from '../../src/common/money';
 
 describe('Money', () => {
   test('cria a partir de string decimal com escala fixa de 2 casas', () => {

@@ -2,7 +2,7 @@
  * Testes unitários do hash de idempotência (JSON canônico + SHA-256).
  */
 import { describe, expect, test } from 'bun:test';
-import { canonicalJson, hashPayload, sha256 } from '../../src/shared/payload-hash';
+import { canonicalJson, hashPayload, sha256 } from '../../src/common/payload-hash';
 
 describe('payload hash', () => {
   test('JSON canônico ordena as chaves recursivamente', () => {
