@@ -89,7 +89,15 @@ describe('Concorrência', () => {
     );
 
     // Todas respondem com sucesso (201 ou 200 de replay).
-    expect(responses.every((r) => r.status === 201 || r.status === 200)).toBe(true);
+    const statusCount: Record<number, number> = {};
+    for (const r of responses) statusCount[r.status] = (statusCount[r.status] ?? 0) + 1;
+
+    expect(
+      responses.every((r) => r.status === 201 || r.status === 200),
+      `status distribution: ${JSON.stringify(statusCount)} - erros: ${JSON.stringify(
+        responses.filter((r) => r.status >= 400).slice(0, 3),
+      )}`,
+    ).toBe(true);
     expect(responses.filter((r) => r.body.idempotentReplay === true).length).toBe(49);
 
     const transactionIds = new Set(responses.map((r) => r.body.transactionId));
